@@ -1,0 +1,29 @@
+AddDefaultCharset UTF-8
+
+<IfModule mod_headers.c>
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+    Header set Pragma "no-cache"
+    Header set Expires "0"
+</IfModule>
+
+RewriteEngine on
+RewriteRule ^db/ - [F,L]
+RewriteRule ^(connect\.php)$ - [F,L]
+RewriteRule ^sitemap\.xml/?$ sitemap.php [L]
+
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME}.php -f
+RewriteRule ^(.*?)/?$ $1.php [L]
+RewriteCond %{THE_REQUEST} \s([^.]+)\.php[\s?] [NC]
+RewriteCond %{REQUEST_METHOD} =GET
+RewriteRule ^ %1 [R=301,L]
+
+# RewriteCond %{REQUEST_FILENAME} !-d
+# RewriteCond %{REQUEST_FILENAME}.html -f
+# RewriteRule ^(.*?)/?$ $1.html [L]
+# RewriteCond %{THE_REQUEST} \s([^.]+)\.html[\s?] [NC]
+# RewriteCond %{REQUEST_METHOD} =GET
+# RewriteRule ^ %1 [R=301,L]
+
+ErrorDocument 404 "<script>window.location='dashboard.php'</script>"
+ErrorDocument 403 "<script>window.location='dashboard.php'</script>"
