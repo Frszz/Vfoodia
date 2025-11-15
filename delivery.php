@@ -611,7 +611,7 @@
                                                         travelMode: google.maps.TravelMode.DRIVING
                                                     }, (response, status) => {
                                                         if (status === 'OK') {
-                                                            const distance = response.routes[0].legs[0].distance.value; // dalam meter
+                                                            const distance = response.routes[0].legs[0].distance.value;
                                                             resolve({
                                                                 dest,
                                                                 response,
@@ -666,106 +666,247 @@
                                     attribution: '© OpenStreetMap contributors'
                                 }).addTo(Omap);
 
-                                const colors = ['red', 'blue', 'green', 'orange', 'purple'];
-
                                 const tujuan = listLocation;
 
-                                tujuan.forEach(t => {
-                                    L.marker([t.lat, t.lng]).addTo(Omap)
-                                        .bindPopup(t.label);
+                                tujuan.forEach((t, index) => {
+                                    const marker = L.marker([t.lat, t.lng]).addTo(Omap);
+                                    marker.bindPopup(`<b>${t.label}</b><br>${t.address || ''}`);
                                 });
 
                                 const apiKey = "<?=$heigitBASICkey?>";
                                 let routeLines = [];
-
                                 let OuserMarker = null;
                                 let latestCoords = null;
+                                let isDrawing = false;
+                                let abortController = null;
+                                let routeUpdateInterval = null;
 
-                                function drawRoutes(startLat, startLng) {
+                                let performanceStats = {
+                                    cacheHits: 0,
+                                    apiCalls: 0,
+                                    totalRoutes: 0,
+                                    totalTime: 0
+                                };
+
+                                async function drawRoutes(startLat, startLng) {
+                                    if (isDrawing) {
+                                        console.log("Already drawing routes, skipping...");
+                                        return;
+                                    }
+                                    
+                                    isDrawing = true;
+                                    console.log("Starting route drawing with caching...");
+                                    
+                                    if (abortController) {
+                                        abortController.abort();
+                                    }
+                                    abortController = new AbortController();
+
                                     routeLines.forEach(line => Omap.removeLayer(line));
                                     routeLines = [];
 
+                                    const batchStats = {
+                                        cacheHits: 0,
+                                        apiCalls: 0,
+                                        errors: 0,
+                                        startTime: Date.now()
+                                    };
+
                                     const tujuanWithDistance = tujuan.map((t) => {
-                                        const distance = Math.sqrt(Math.pow(t.lat - startLat, 2) + Math.pow(t.lng - startLng, 2));
+                                        const distance = Math.sqrt(
+                                            Math.pow(t.lat - startLat, 2) + 
+                                            Math.pow(t.lng - startLng, 2)
+                                        );
                                         return { ...t, distance };
                                     });
 
                                     tujuanWithDistance.sort((a, b) => a.distance - b.distance);
 
                                     const specialColors = ['green', 'yellow', 'blue'];
+                                    const batchSize = 5;
 
-                                    tujuanWithDistance.forEach(async (t, index) => {
-                                        const url = `https://api.openrouteservice.org/v2/directions/driving-car?api_key=${apiKey}`;
-                                        const body = {
-                                            coordinates: [
-                                                [startLng, startLat],
-                                                [t.lng, t.lat]
-                                            ]
-                                        };
+                                    for (let i = 0; i < tujuanWithDistance.length; i += batchSize) {
+                                        const batch = tujuanWithDistance.slice(i, i + batchSize);
+                                        
+                                        console.log(`Processing batch ${Math.floor(i/batchSize) + 1}/${Math.ceil(tujuanWithDistance.length/batchSize)}`);
+                                        
+                                        const promises = batch.map(async (t, batchIndex) => {
+                                            const globalIndex = i + batchIndex;
+                                            
+                                            try {
+                                                const routeStart = Date.now();
+                                                const url = `utils/caching.php?startLat=${startLat}&startLng=${startLng}&endLat=${t.lat}&endLng=${t.lng}`;
+                                                
+                                                const response = await fetch(url, {
+                                                    signal: abortController.signal
+                                                });
 
-                                        try {
-                                            const response = await fetch(url, {
-                                                method: 'POST',
-                                                headers: {
-                                                    'Content-Type': 'application/json',
-                                                    'Accept': 'application/json'
-                                                },
-                                                body: JSON.stringify(body)
-                                            });
+                                                if (!response.ok) {
+                                                    if (response.status === 429) {
+                                                        console.warn("Rate limit hit, waiting 5 seconds...");
+                                                        await new Promise(resolve => setTimeout(resolve, 5000));
+                                                        batchStats.errors++;
+                                                        return null;
+                                                    }
+                                                    throw new Error(`HTTP ${response.status}`);
+                                                }
 
-                                            const json = await response.json();
+                                                const json = await response.json();
+                                                const elapsed = Date.now() - routeStart;
+                                                
+                                                if (json.cached) {
+                                                    batchStats.cacheHits++;
+                                                    console.log(`Cache hit: ${t.label} (${elapsed}ms)`);
+                                                } else {
+                                                    batchStats.apiCalls++;
+                                                    console.log(`API call: ${t.label} (${elapsed}ms)`);
+                                                }
 
-                                            const route = json.routes[0].geometry;
-                                            const decodedRoute = L.Polyline.fromEncoded(route).getLatLngs();
+                                                const route = json.routes[0].geometry;
+                                                const decodedRoute = L.Polyline.fromEncoded(route).getLatLngs();
 
-                                            let color;
-                                            if (index < 3) {
-                                                color = specialColors[index];
-                                            } else {
-                                                color = 'red';
+                                                let color = globalIndex < 3 ? specialColors[globalIndex] : 'red';
+
+                                                const polyline = L.polyline(decodedRoute, {
+                                                    color: color,
+                                                    weight: 5,
+                                                    opacity: 0.8
+                                                }).addTo(Omap);
+
+                                                const distanceKm = (json.routes[0].summary.distance / 1000).toFixed(2);
+                                                const durationMin = Math.round(json.routes[0].summary.duration / 60);
+                                                
+                                                polyline.bindPopup(
+                                                    `<b>${t.label}</b><br>` +
+                                                    `${distanceKm} km<br>` +
+                                                    `${durationMin} menit`
+                                                );
+
+                                                routeLines.push(polyline);
+                                                
+                                                return true;
+                                            } catch (error) {
+                                                if (error.name === 'AbortError') {
+                                                    console.log("Request aborted");
+                                                } else {
+                                                    console.error(`Error for ${t.label}:`, error);
+                                                    batchStats.errors++;
+                                                }
+                                                return null;
                                             }
+                                        });
 
-                                            const polyline = L.polyline(decodedRoute, {
-                                                color: color,
-                                                weight: 5,
-                                                opacity: 0.8
-                                            }).addTo(Omap);
-
-                                            routeLines.push(polyline);
-                                        } catch (error) {
-                                            console.error("Gagal mengambil rute:", error);
+                                        await Promise.all(promises);
+                                        
+                                        if (i + batchSize < tujuanWithDistance.length) {
+                                            await new Promise(resolve => setTimeout(resolve, 1000));
                                         }
-                                    });
+                                    }
+
+                                    batchStats.totalTime = Date.now() - batchStats.startTime;
+
+                                    performanceStats.cacheHits += batchStats.cacheHits;
+                                    performanceStats.apiCalls += batchStats.apiCalls;
+                                    performanceStats.totalRoutes += tujuanWithDistance.length;
+                                    performanceStats.totalTime += batchStats.totalTime;
+
+                                    const cacheRate = tujuanWithDistance.length > 0 
+                                        ? Math.round(batchStats.cacheHits / tujuanWithDistance.length * 100) 
+                                        : 0;
+                                    const avgTime = tujuanWithDistance.length > 0 
+                                        ? Math.round(batchStats.totalTime / tujuanWithDistance.length) 
+                                        : 0;
+                                    const overallCacheRate = performanceStats.totalRoutes > 0 
+                                        ? Math.round(performanceStats.cacheHits / performanceStats.totalRoutes * 100) 
+                                        : 0;
+
+                                    console.log(`
+Batch Performance:
+   Cache Hits: ${batchStats.cacheHits}
+   API Calls: ${batchStats.apiCalls}
+   Errors: ${batchStats.errors}
+   Total Time: ${batchStats.totalTime}ms
+   Avg/Route: ${avgTime}ms
+   Cache Rate: ${cacheRate}%
+
+Overall Stats:
+   Total Routes: ${performanceStats.totalRoutes}
+   Total Cache Hits: ${performanceStats.cacheHits}
+   Total API Calls: ${performanceStats.apiCalls}
+   Avg Cache Rate: ${overallCacheRate}%
+                                    `);
+
+                                    isDrawing = false;
                                 }
 
                                 if (navigator.geolocation) {
-                                    navigator.geolocation.watchPosition(pos => {
-                                        const lat = pos.coords.latitude;
-                                        const lng = pos.coords.longitude;
+                                    navigator.geolocation.watchPosition(
+                                        pos => {
+                                            const lat = pos.coords.latitude;
+                                            const lng = pos.coords.longitude;
 
-                                        latestCoords = { lat, lng };
+                                            latestCoords = { lat, lng };
 
-                                        if (OuserMarker) {
-                                            OuserMarker.setLatLng([lat, lng]);
-                                        } else {
-                                            OuserMarker = L.marker([lat, lng], {
-                                                icon: L.icon({
-                                                    iconUrl: 'https://img.icons8.com/?size=25&id=oWwF0H4PdHkh&format=png&color=000000',
-                                                    iconSize: [32, 32],
-                                                    iconAnchor: [16, 32]
-                                                })
-                                            }).addTo(Omap).bindPopup("Lokasi Saya").openPopup();
-                                        }
-                                        <?php if ($_SESSION['role'] == 'KURIR') : ?>
-                                            drawRoutes(lat, lng);
-                                        <?php endif; ?>
-                                    }, () => alert("Gagal mengambil lokasi pengguna"));
-                                    <?php if ($_SESSION['role'] == 'KURIR') : ?>
-                                        setInterval(() => {
-                                            if (latestCoords) {
-                                                drawRoutes(latestCoords.lat, latestCoords.lng);
+                                            if (OuserMarker) {
+                                                OuserMarker.setLatLng([lat, lng]);
+                                            } else {
+                                                OuserMarker = L.marker([lat, lng], {
+                                                    icon: L.icon({
+                                                        iconUrl: 'https://img.icons8.com/?size=25&id=oWwF0H4PdHkh&format=png&color=000000',
+                                                        iconSize: [32, 32],
+                                                        iconAnchor: [16, 32]
+                                                    })
+                                                }).addTo(Omap).bindPopup("Lokasi Saya").openPopup();
+                                                
+                                                <?php if ($_SESSION['role'] == 'KURIR') : ?>
+                                                    drawRoutes(lat, lng);
+                                                <?php endif; ?>
                                             }
-                                        }, 100000);
+                                            
+                                            Omap.setView([lat, lng], 13);
+                                        },
+                                        error => {
+                                            console.error("Geolocation error:", error);
+                                            alert("Gagal mengambil lokasi. Pastikan GPS aktif dan izin diberikan.");
+                                        },
+                                        {
+                                            enableHighAccuracy: true,
+                                            timeout: 10000,
+                                            maximumAge: 30000
+                                        }
+                                    );
+
+                                    <?php if ($_SESSION['role'] == 'KURIR') : ?>
+                                        document.addEventListener('visibilitychange', () => {
+                                            if (document.hidden) {
+                                                console.log("Tab hidden, pausing updates");
+                                                if (routeUpdateInterval) {
+                                                    clearInterval(routeUpdateInterval);
+                                                    routeUpdateInterval = null;
+                                                }
+                                            } else {
+                                                console.log("Tab visible, resuming updates");
+                                                if (!routeUpdateInterval && latestCoords) {
+                                                    drawRoutes(latestCoords.lat, latestCoords.lng);
+                                                    
+                                                    routeUpdateInterval = setInterval(() => {
+                                                        if (latestCoords && !document.hidden) {
+                                                            console.log("Auto-refresh routes");
+                                                            drawRoutes(latestCoords.lat, latestCoords.lng);
+                                                        }
+                                                    }, 300000);
+                                                }
+                                            }
+                                        });
+                                        
+                                        if (!document.hidden) {
+                                            routeUpdateInterval = setInterval(() => {
+                                                if (latestCoords && !document.hidden) {
+                                                    console.log("Auto-refresh routes");
+                                                    drawRoutes(latestCoords.lat, latestCoords.lng);
+                                                }
+                                            }, 300000);
+                                        }
                                     <?php endif; ?>
                                 } else {
                                     alert("Browser tidak mendukung geolokasi.");
