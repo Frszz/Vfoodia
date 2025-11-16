@@ -510,20 +510,8 @@
                                             <th colspan="2">Keterangan Rute</th>
                                         </tr>
                                         <tr>
-                                            <td class="val"><div class="color-box" style="background-color: green;"></div></td>
-                                            <td class="key">Ke-1 Paling Dekat</td>
-                                        </tr>
-                                        <tr>
-                                            <td class="val"><div class="color-box" style="background-color: yellow;"></div></td>
-                                            <td class="key">Ke-2 Paling Dekat</td>
-                                        </tr>
-                                        <tr>
                                             <td class="val"><div class="color-box" style="background-color: red;"></div></td>
-                                            <td class="key">Ke-3 Paling Dekat</td>
-                                        </tr>
-                                        <tr>
-                                            <td class="val"><div class="color-box" style="background-color: blue;"></div></td>
-                                            <td class="key">Tidak Dekat</td>
+                                            <td class="key">Rute Pengantaran</td>
                                         </tr>
                                     </table>
                         <?php
@@ -667,10 +655,12 @@
                                 }).addTo(Omap);
 
                                 const tujuan = listLocation;
-
+                                const destinationMarkers = {};
+                                
                                 tujuan.forEach((t, index) => {
                                     const marker = L.marker([t.lat, t.lng]).addTo(Omap);
-                                    marker.bindPopup(`<b>${t.label}</b><br>${t.address || ''}`);
+                                    marker.bindPopup(`<b>${t.label}</b><br>${t.address || 'Memuat informasi jarak...'}`);
+                                    destinationMarkers[`${t.lat},${t.lng}`] = marker;
                                 });
 
                                 const apiKey = "<?=$heigitBASICkey?>";
@@ -722,7 +712,6 @@
 
                                     tujuanWithDistance.sort((a, b) => a.distance - b.distance);
 
-                                    const specialColors = ['green', 'yellow', 'blue'];
                                     const batchSize = 5;
 
                                     for (let i = 0; i < tujuanWithDistance.length; i += batchSize) {
@@ -765,22 +754,30 @@
                                                 const route = json.routes[0].geometry;
                                                 const decodedRoute = L.Polyline.fromEncoded(route).getLatLngs();
 
-                                                let color = globalIndex < 3 ? specialColors[globalIndex] : 'red';
-
                                                 const polyline = L.polyline(decodedRoute, {
-                                                    color: color,
+                                                    color: 'red',
                                                     weight: 5,
                                                     opacity: 0.8
                                                 }).addTo(Omap);
 
-                                                const distanceKm = (json.routes[0].summary.distance / 1000).toFixed(2);
+                                                const distanceM = json.routes[0].summary.distance;
+                                                const distanceKm = (distanceM / 1000).toFixed(2);
                                                 const durationMin = Math.round(json.routes[0].summary.duration / 60);
                                                 
                                                 polyline.bindPopup(
                                                     `<b>${t.label}</b><br>` +
-                                                    `${distanceKm} km<br>` +
-                                                    `${durationMin} menit`
+                                                    `<b>Jarak:</b> ${distanceM.toLocaleString('id-ID')} meter (${distanceKm} km)<br>` +
+                                                    `<b>Waktu:</b> ${durationMin} menit`
                                                 );
+
+                                                const markerKey = `${t.lat},${t.lng}`;
+                                                if (destinationMarkers[markerKey]) {
+                                                    destinationMarkers[markerKey].bindPopup(
+                                                        `<b>${t.label}</b><br>` +
+                                                        `<b>Jarak:</b> ${distanceM.toLocaleString('id-ID')} meter (${distanceKm} km)<br>` +
+                                                        `<b>Waktu:</b> ${durationMin} menit`
+                                                    );
+                                                }
 
                                                 routeLines.push(polyline);
                                                 
