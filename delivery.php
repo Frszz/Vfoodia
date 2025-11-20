@@ -1,5 +1,6 @@
 <?php
     require "connect.php";
+    require "utils/routing.php";
 
     if (isset($_SESSION['user']) && isset($_SESSION['pass']) && isset($_SESSION['role'])) {
 ?>
@@ -205,6 +206,7 @@
                     <section class="container section section__height">
                         <h2 class="section__title">Pengantaran</h2>
                         <?php
+                            $listLocation = [];
                             $optionStatus = [];
                             $result = mysqli_query($con, "SHOW COLUMNS FROM `tbl_delivery` WHERE `field` = 'status'");
                             if ($result) {
@@ -216,7 +218,7 @@
                             }
                         ?>
                         <script>
-                            const statusOptions = <?=json_encode($optionStatus)?>
+                            const statusOptions = <?=json_encode($optionStatus)?>;
                         </script>
                         <?php
                             if ($_SESSION['role'] == 'KURIR') {
@@ -361,6 +363,7 @@
                                 </script>
                         <?php
                             } else if ($_SESSION['role'] == 'ADMIN') {
+                                // Reset listLocation for ADMIN view
                                 $listLocation = [];
                                 $seenKeys = [];
                                 $today = date('Y-m-d');
@@ -496,7 +499,7 @@
                             }
                         ?>
                         <script>
-                            const listLocation = <?=json_encode($listLocation)?>
+                            const listLocation = <?=json_encode($listLocation)?>;
                         </script>
                         <?php
                             if (!empty($listLocation)) {
@@ -518,14 +521,20 @@
                                 }
                         ?>
                                 <div id="map"></div>
-                                <table class="detail-dlv">
+                                <table class="detail-dlv" id="delivery-details">
                                     <tr>
-                                        <th colspan="3">Detail Pengantaran</th>
+                                        <th colspan="4">Detail Pengantaran</th>
+                                    </tr>
+                                    <tr id="route-info-row" style="display: none;">
+                                        <td colspan="4" style="background-color: #e3f2fd; padding: 10px; font-weight: bold; text-align: center;" id="route-summary">
+                                            Calculating optimized route...
+                                        </td>
                                     </tr>
                                     <?php
-                                        foreach ($listLocation as $itemLocation) {
+                                        foreach ($listLocation as $index => $itemLocation) {
                                     ?>
-                                            <tr>
+                                            <tr class="delivery-row" data-lat="<?=$itemLocation['lat']?>" data-lng="<?=$itemLocation['lng']?>">
+                                                <td class="sequence-col" style="width: 40px; text-align: center; font-weight: bold;">-</td>
                                                 <td class="key"><?=$itemLocation['label']?></td>
                                                 <td class="val" style="width: fit-content; white-space: nowrap;"><a href="https://www.google.com/maps?q=<?=$itemLocation['lat']?>,<?=$itemLocation['lng']?>" target="_blank">Google Maps</a></td>
                                                 <td class="key"><?=$itemLocation['kurir']?></td>
@@ -654,7 +663,59 @@
                                     attribution: '© OpenStreetMap contributors'
                                 }).addTo(Omap);
 
-                                const tujuan = listLocation;
+                                // Haversine formula
+                                function calculateDistance(lat1, lng1, lat2, lng2) {
+                                    const R = 6371;
+                                    const dLat = (lat2 - lat1) * Math.PI / 180;
+                                    const dLng = (lng2 - lng1) * Math.PI / 180;
+                                    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                                            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                                            Math.sin(dLng/2) * Math.sin(dLng/2);
+                                    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+                                    return R * c;
+                                }
+
+                                function optimizeRoute(startLat, startLng, destinations) {
+                                    if (destinations.length === 0) return [];
+                                    if (destinations.length === 1) {
+                                        destinations[0].sequence = 1;
+                                        destinations[0].distanceFromPrev = calculateDistance(startLat, startLng, destinations[0].lat, destinations[0].lng);
+                                        return destinations;
+                                    }
+
+                                    const visited = [];
+                                    const optimized = [];
+                                    let current = { lat: startLat, lng: startLng };
+                                    let sequence = 1;
+
+                                    while (visited.length < destinations.length) {
+                                        let nearestIdx = -1;
+                                        let minDist = Infinity;
+
+                                        destinations.forEach((dest, idx) => {
+                                            if (visited.includes(idx)) return;
+                                            const dist = calculateDistance(current.lat, current.lng, dest.lat, dest.lng);
+                                            if (dist < minDist) {
+                                                minDist = dist;
+                                                nearestIdx = idx;
+                                            }
+                                        });
+
+                                        if (nearestIdx !== -1) {
+                                            visited.push(nearestIdx);
+                                            const destination = { ...destinations[nearestIdx] };
+                                            destination.sequence = sequence;
+                                            destination.distanceFromPrev = minDist;
+                                            optimized.push(destination);
+                                            current = { lat: destination.lat, lng: destination.lng };
+                                            sequence++;
+                                        }
+                                    }
+
+                                    return optimized;
+                                }
+
+                                let tujuan = listLocation;
                                 const destinationMarkers = {};
                                 
                                 tujuan.forEach((t, index) => {
@@ -702,15 +763,30 @@
                                         startTime: Date.now()
                                     };
 
-                                    const tujuanWithDistance = tujuan.map((t) => {
-                                        const distance = Math.sqrt(
-                                            Math.pow(t.lat - startLat, 2) + 
-                                            Math.pow(t.lng - startLng, 2)
-                                        );
-                                        return { ...t, distance };
+                                    const tujuanWithDistance = optimizeRoute(startLat, startLng, tujuan);
+                                    
+                                    console.log("Optimized route order:");
+                                    tujuanWithDistance.forEach(dest => {
+                                        console.log(`${dest.sequence}. ${dest.label} - ${dest.distanceFromPrev.toFixed(2)} km from previous`);
                                     });
-
-                                    tujuanWithDistance.sort((a, b) => a.distance - b.distance);
+                                    Object.values(destinationMarkers).forEach(marker => Omap.removeLayer(marker));
+                                    
+                                    tujuanWithDistance.forEach((dest) => {
+                                        const customIcon = L.divIcon({
+                                            className: 'custom-marker',
+                                            html: `<div style="background-color: #4285F4; color: white; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);">${dest.sequence}</div>`,
+                                            iconSize: [32, 32],
+                                            iconAnchor: [16, 16]
+                                        });
+                                        
+                                        const marker = L.marker([dest.lat, dest.lng], { icon: customIcon }).addTo(Omap);
+                                        marker.bindPopup(`
+                                            <b>Stop ${dest.sequence}: ${dest.label}</b><br>
+                                            Distance from previous: ${dest.distanceFromPrev.toFixed(2)} km<br>
+                                            ${dest.address || ''}
+                                        `);
+                                        destinationMarkers[`${dest.lat},${dest.lng}`] = marker;
+                                    });
 
                                     const batchSize = 5;
 
@@ -833,7 +909,40 @@ Overall Stats:
    Avg Cache Rate: ${overallCacheRate}%
                                     `);
 
+                                    updateDeliveryTable(tujuanWithDistance);
+
                                     isDrawing = false;
+                                }
+
+                                function updateDeliveryTable(optimizedDestinations) {
+                                    const rows = document.querySelectorAll('#delivery-details .delivery-row');
+                                    
+                                    const locationMap = new Map();
+                                    optimizedDestinations.forEach(dest => {
+                                        const key = `${dest.lat},${dest.lng}`;
+                                        locationMap.set(key, dest);
+                                    });
+
+                                    rows.forEach(row => {
+                                        const lat = row.getAttribute('data-lat');
+                                        const lng = row.getAttribute('data-lng');
+                                        const key = `${lat},${lng}`;
+                                        const dest = locationMap.get(key);
+                                        
+                                        if (dest) {
+                                            const sequenceCol = row.querySelector('.sequence-col');
+                                            sequenceCol.textContent = dest.sequence;
+                                            sequenceCol.style.backgroundColor = '#4285F4';
+                                            sequenceCol.style.color = 'white';
+                                        }
+                                    });
+
+                                    const totalDistance = optimizedDestinations.reduce((sum, dest) => sum + dest.distanceFromPrev, 0);
+                                    
+                                    const routeInfoRow = document.getElementById('route-info-row');
+                                    if (routeInfoRow) {
+                                        routeInfoRow.style.display = 'none';
+                                    }
                                 }
 
                                 if (navigator.geolocation) {
