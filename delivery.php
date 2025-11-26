@@ -239,11 +239,15 @@
                                             'lat' => $lat,
                                             'lng' => $lng,
                                             'label' => $customerCode . ' - ' . $dataLocation['customer_name'],
-                                            'kurir' => $kurirCode . ' - ' . $dataLocation['kurir_name']
+                                            'kurir' => $kurirCode . ' - ' . $dataLocation['kurir_name'],
+                                            'address' => $dataLocation['customer_address']
                                         ];
                                     }
                                 }
                         ?>
+                                <?php if (!empty($listLocation)) : ?>
+
+                                <?php endif; ?>
                                 <button class="other-button" id="submitStatus" style="margin-bottom: 10px;">Submit Status</button>
                                 <table id="record" class="display nowrap" style="width:100%">
                                     <thead>
@@ -520,7 +524,77 @@
                         <?php
                                 }
                         ?>
-                                <div id="map"></div>
+                                <div class="custom-route-container">
+                                    <h3><i class='bx bx-map'></i> Custom Rute Pengantaran</h3>
+                                    <div class="route-selection-grid">
+                                        <div class="route-select-group">
+                                            <label>Lokasi Awal:</label>
+                                            <select id="startLocation" class="searchable">
+                                                <option value="">Pilih Lokasi Awal</option>
+                                                <?php foreach ($listLocation as $loc) : ?>
+                                                    <option value="<?=$loc['lat']?>,<?=$loc['lng']?>" 
+                                                            data-name="<?=htmlspecialchars(explode(' - ', $loc['label'])[1] ?? $loc['label'])?>">
+                                                        <?=$loc['label']?>
+                                                    </option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                        </div>
+                                        <div class="route-select-group">
+                                            <label>Lokasi Tujuan:</label>
+                                            <select id="endLocation" class="searchable">
+                                                <option value="">Pilih Lokasi Tujuan</option>
+                                                <?php foreach ($listLocation as $loc) : ?>
+                                                    <option value="<?=$loc['lat']?>,<?=$loc['lng']?>"
+                                                            data-name="<?=htmlspecialchars(explode(' - ', $loc['label'])[1] ?? $loc['label'])?>">
+                                                        <?=$loc['label']?>
+                                                    </option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                        </div>
+                                        <button id="btnCariRute" class="btn-route-action btn-route-cari">
+                                            Cari
+                                        </button>
+                                        <button id="btnResetRute" class="btn-route-action btn-route-reset">
+                                            Reset
+                                        </button>
+                                    </div>
+                                    <div id="routeResult" class="route-result-box" style="display: none;">
+                                        <strong>Rute Terdekat:</strong> <span id="nearestLocationText"></span>
+                                    </div>
+                                </div>
+                                <div id="map" style="position: relative;">
+                                    <div id="routeInfoOverlay" style="display: none; position: absolute; top: 10px; right: 10px; z-index: 1000; background: white; border: 1px solid #ddd; max-width: 350px; max-height: 80vh; overflow-y: auto;">
+                                        <div style="padding: 10px; border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center; background: #f5f5f5;">
+                                            <div>
+                                                <h3 style="margin: 0; font-size: 14px; font-weight: bold; color: #333;">Informasi Rute</h3>
+                                                <p style="margin: 3px 0 0 0; font-size: 11px; color: #666;" id="routeInfoSubtitle">Urutan Pengantaran Hari Ini</p>
+                                            </div>
+                                            <button id="closeRouteInfo" style="background: #e0e0e0; border: none; color: #333; width: 24px; height: 24px; cursor: pointer; font-size: 14px;">
+                                                ✕
+                                            </button>
+                                        </div>
+                                        <div style="padding: 10px;">
+                                            <div id="routeTotalDistance" style="background: #f0f0f0; padding: 8px; margin-bottom: 10px; text-align: center; font-weight: bold; color: #333; font-size: 13px;">
+                                                Total: <span id="totalDistanceValue">-</span> km
+                                            </div>
+                                            <table style="width: 100%; border-collapse: collapse; font-size: 12px;" id="routeInfoTable">
+                                                <thead>
+                                                    <tr style="background: #f9f9f9; border-bottom: 1px solid #ddd;">
+                                                        <th style="padding: 6px 4px; text-align: center; width: 30px;">No</th>
+                                                        <th style="padding: 6px 8px; text-align: left;">Lokasi</th>
+                                                        <th style="padding: 6px 8px; text-align: right;">Jarak</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="routeInfoTableBody">
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                    
+                                    <button id="toggleRouteInfo" style="display: none; position: absolute; top: 10px; right: 10px; z-index: 999; background: #4285F4; color: white; border: 1px solid #3367D6; padding: 8px 16px; cursor: pointer; font-weight: 500; font-size: 13px;">
+                                        Lihat Rute
+                                    </button>
+                                </div>
                                 <table class="detail-dlv" id="delivery-details">
                                     <tr>
                                         <th colspan="4">Detail Pengantaran</th>
@@ -943,6 +1017,75 @@ Overall Stats:
                                     if (routeInfoRow) {
                                         routeInfoRow.style.display = 'none';
                                     }
+
+                                    updateRouteInfoOverlay(optimizedDestinations);
+                                }
+                                
+                                function updateRouteInfoOverlay(optimizedDestinations) {
+                                    const tableBody = document.getElementById('routeInfoTableBody');
+                                    const totalDistanceValue = document.getElementById('totalDistanceValue');
+                                    const toggleButton = document.getElementById('toggleRouteInfo');
+                                    
+                                    if (!tableBody) return;
+                                    
+                                    tableBody.innerHTML = '';
+                                    
+                                    let cumulativeDistance = 0;
+                                    
+                                    function numberToAlphabet(num) {
+                                        return String.fromCharCode(64 + num);
+                                    }
+                                    
+                                    optimizedDestinations.forEach((dest, index) => {
+                                        cumulativeDistance += dest.distanceFromPrev;
+                                        
+                                        const row = document.createElement('tr');
+                                        row.style.borderBottom = '1px solid #e0e0e0';
+                                        
+                                        const customerName = dest.label.split(' - ')[1] || dest.label;
+                                        const customerCode = dest.label.split(' - ')[0] || '';
+                                        const alphabet = numberToAlphabet(dest.sequence);
+                                        
+                                        row.innerHTML = `
+                                            <td style="padding: 8px 4px; text-align: center; font-weight: bold; color: #333;">${alphabet}</td>
+                                            <td style="padding: 8px;">
+                                                <div style="font-weight: 500; font-size: 13px; color: #333;">${customerName}</div>
+                                                <div style="font-size: 11px; color: #666; margin-top: 2px;">${customerCode}</div>
+                                            </td>
+                                            <td style="padding: 8px; text-align: right; font-weight: 500; color: #333; white-space: nowrap;">
+                                                ${cumulativeDistance.toFixed(1)} km
+                                            </td>
+                                        `;
+                                        
+                                        tableBody.appendChild(row);
+                                    });
+                                    
+                                    totalDistanceValue.textContent = cumulativeDistance.toFixed(1);
+                                    
+                                    if (optimizedDestinations.length > 0 && toggleButton) {
+                                        toggleButton.style.display = 'block';
+                                    }
+                                }
+                                
+                                $(document).on('click', '#toggleRouteInfo', function() {
+                                    $('#routeInfoOverlay').fadeIn(300);
+                                    $(this).fadeOut(300);
+                                });
+                                
+                                $(document).on('click', '#closeRouteInfo', function() {
+                                    $('#routeInfoOverlay').fadeOut(300);
+                                    $('#toggleRouteInfo').fadeIn(300);
+                                });
+
+                                const overlayElement = document.getElementById('routeInfoOverlay');
+                                if (overlayElement) {
+                                    overlayElement.addEventListener('wheel', function(e) {
+                                        e.stopPropagation();
+                                    }, { passive: false });
+                                    
+                                    overlayElement.addEventListener('touchmove', function(e) {
+                                        e.stopPropagation();
+                                    }, { passive: false });
                                 }
 
                                 if (navigator.geolocation) {
@@ -965,7 +1108,10 @@ Overall Stats:
                                                 }).addTo(Omap).bindPopup("Lokasi Saya").openPopup();
                                                 
                                                 <?php if ($_SESSION['role'] == 'KURIR') : ?>
-                                                    drawRoutes(lat, lng);
+                                                    // Only auto-draw if no custom route is active
+                                                    if (!customRouteActive) {
+                                                        drawRoutes(lat, lng);
+                                                    }
                                                 <?php endif; ?>
                                             }
                                             
@@ -992,11 +1138,11 @@ Overall Stats:
                                                 }
                                             } else {
                                                 console.log("Tab visible, resuming updates");
-                                                if (!routeUpdateInterval && latestCoords) {
+                                                if (!routeUpdateInterval && latestCoords && !customRouteActive) {
                                                     drawRoutes(latestCoords.lat, latestCoords.lng);
                                                     
                                                     routeUpdateInterval = setInterval(() => {
-                                                        if (latestCoords && !document.hidden) {
+                                                        if (latestCoords && !document.hidden && !customRouteActive) {
                                                             console.log("Auto-refresh routes");
                                                             drawRoutes(latestCoords.lat, latestCoords.lng);
                                                         }
@@ -1007,7 +1153,7 @@ Overall Stats:
                                         
                                         if (!document.hidden) {
                                             routeUpdateInterval = setInterval(() => {
-                                                if (latestCoords && !document.hidden) {
+                                                if (latestCoords && !document.hidden && !customRouteActive) {
                                                     console.log("Auto-refresh routes");
                                                     drawRoutes(latestCoords.lat, latestCoords.lng);
                                                 }
@@ -1024,6 +1170,164 @@ Overall Stats:
                 ?>
 
                 <script>
+                    let originalDestinations = typeof listLocation !== 'undefined' ? [...listLocation] : [];
+                    let customRouteActive = false;
+
+                    function filterDestinationsByRoute(startLat, startLng, endLat, endLng, allDestinations) {
+                        if (!startLat || !startLng || !endLat || !endLng) {
+                            return allDestinations;
+                        }
+
+                        function calculateBearing(lat1, lng1, lat2, lng2) {
+                            const dLon = (lng2 - lng1) * Math.PI / 180;
+                            const y = Math.sin(dLon) * Math.cos(lat2 * Math.PI / 180);
+                            const x = Math.cos(lat1 * Math.PI / 180) * Math.sin(lat2 * Math.PI / 180) -
+                                    Math.sin(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.cos(dLon);
+                            const brng = Math.atan2(y, x);
+                            return ((brng * 180 / Math.PI) + 360) % 360;
+                        }
+
+                        function distanceToLineSegment(pointLat, pointLng, startLat, startLng, endLat, endLng) {
+                            const R = 6371; // Earth radius in km
+                            
+                            const lat1 = startLat * Math.PI / 180;
+                            const lng1 = startLng * Math.PI / 180;
+                            const lat2 = endLat * Math.PI / 180;
+                            const lng2 = endLng * Math.PI / 180;
+                            const latP = pointLat * Math.PI / 180;
+                            const lngP = pointLng * Math.PI / 180;
+                            
+                            const distToStart = calculateDistance(pointLat, pointLng, startLat, startLng);
+                            const distToEnd = calculateDistance(pointLat, pointLng, endLat, endLng);
+                            const directDist = calculateDistance(startLat, startLng, endLat, endLng);
+                            
+                            return Math.min(distToStart, distToEnd, (distToStart + distToEnd - directDist) / 2);
+                        }
+
+                        const mainRouteDistance = calculateDistance(startLat, startLng, endLat, endLng);
+                        const threshold = mainRouteDistance * 0.4; // 40% tolerance from direct route
+
+                        const filtered = allDestinations.filter(dest => {
+                            const distToLine = distanceToLineSegment(dest.lat, dest.lng, startLat, startLng, endLat, endLng);
+                            const distFromStart = calculateDistance(startLat, startLng, dest.lat, dest.lng);
+                            const distFromEnd = calculateDistance(dest.lat, dest.lng, endLat, endLng);
+                            
+                            // Destination should be:
+                            // 1. within threshold distance from the direct route
+                            // 2. not be the start or end point itself
+                            return distToLine <= threshold && 
+                                   distFromStart > 0.1 && 
+                                   distFromEnd > 0.1 &&
+                                   (distFromStart + distFromEnd) < (mainRouteDistance * 1.5);
+                        });
+
+                        return filtered;
+                    }
+
+                    $(document).on('click', '#btnCariRute', function() {
+                        const startVal = $('#startLocation').val();
+                        const endVal = $('#endLocation').val();
+
+                        if (!startVal || !endVal) {
+                            Swal.fire({
+                                icon: 'warning',
+                                title: 'Peringatan',
+                                text: 'Pilih lokasi awal dan tujuan terlebih dahulu!',
+                                confirmButtonText: 'OK'
+                            });
+                            return;
+                        }
+
+                        if (startVal === endVal) {
+                            Swal.fire({
+                                icon: 'warning',
+                                title: 'Peringatan',
+                                text: 'Lokasi awal dan tujuan tidak boleh sama!',
+                                confirmButtonText: 'OK'
+                            });
+                            return;
+                        }
+
+                        const [startLat, startLng] = startVal.split(',').map(parseFloat);
+                        const [endLat, endLng] = endVal.split(',').map(parseFloat);
+                        const startName = $('#startLocation option:selected').data('name');
+                        const endName = $('#endLocation option:selected').data('name');
+
+                        Swal.fire({
+                            title: 'Menghitung Rute...',
+                            html: 'Mohon tunggu sebentar',
+                            allowOutsideClick: false,
+                            didOpen: () => {
+                                Swal.showLoading();
+                            }
+                        });
+
+                        const filteredDestinations = filterDestinationsByRoute(
+                            startLat, startLng, endLat, endLng, originalDestinations
+                        );
+
+                        const destinationsWithEnd = [...filteredDestinations, {
+                            lat: endLat,
+                            lng: endLng,
+                            label: endName + ' (Tujuan Akhir)',
+                            kurir: filteredDestinations[0]?.kurir || ''
+                        }];
+
+                        if (typeof tujuan !== 'undefined') {
+                            tujuan = destinationsWithEnd;
+                        }
+                        customRouteActive = true;
+
+                        $('#routeResult').show();
+                        $('#nearestLocationText').html(
+                            `<strong>${startName}</strong> → ${filteredDestinations.length} lokasi pengantaran → <strong>${endName}</strong>`
+                        );
+                        
+                        $('#routeInfoSubtitle').text(`Rute: ${startName} → ${endName}`);
+
+                        if (typeof drawRoutes === 'function' && latestCoords) {
+                            drawRoutes(startLat, startLng);
+                        }
+
+                        Swal.close();
+                        
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Rute Ditemukan!',
+                            html: `Ditemukan <strong>${filteredDestinations.length}</strong> lokasi pengantaran dalam rute ini`,
+                            timer: 2000,
+                            showConfirmButton: false
+                        });
+                    });
+
+                    $(document).on('click', '#btnResetRute', function() {
+                        $('#startLocation').val('').trigger('change');
+                        $('#endLocation').val('').trigger('change');
+                        $('#routeResult').hide();
+                        
+                        if (typeof tujuan !== 'undefined') {
+                            tujuan = [...originalDestinations];
+                        }
+                        customRouteActive = false;
+
+                        $('#routeInfoOverlay').fadeOut(300);
+                        $('#toggleRouteInfo').fadeIn(300);
+                        
+                        $('#routeInfoSubtitle').text('Urutan Pengantaran Hari Ini');
+
+                        if (typeof drawRoutes === 'function' && latestCoords) {
+                            drawRoutes(latestCoords.lat, latestCoords.lng);
+                        }
+
+                        Swal.fire({
+                            icon: 'info',
+                            title: 'Rute Direset',
+                            text: 'Kembali ke rute normal',
+                            timer: 1500,
+                            showConfirmButton: false
+                        });
+                    });
+
                     $(document).on('click', '#submitStatus', function() {
                         let updates = [];
                         $('.status-select').each(function() {

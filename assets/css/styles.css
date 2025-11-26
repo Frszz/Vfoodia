@@ -735,3 +735,185 @@ table td {
     margin-right: auto;
   }
 }
+
+/*=============== CUSTOM ROUTE SELECTION ===============*/
+.custom-route-container {
+  background: var(--container-color);
+  padding: 15px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  border: 1px solid #CACACA;
+}
+
+.custom-route-container h3 {
+  margin: 0 0 15px 0;
+  color: var(--title-color);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.custom-route-container h3 i {
+  margin-right: 5px;
+}
+
+.route-selection-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.route-select-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.route-select-group label {
+  font-size: 14px;
+  color: var(--text-color);
+  font-weight: 600;
+  margin-bottom: 5px;
+}
+
+.route-select-group select {
+  padding: 10px 15px;
+  border: 1px solid #CACACA;
+  border-radius: 6px;
+  font-size: 14px;
+  color: var(--text-color);
+  background-color: white;
+  outline: none;
+}
+
+.route-select-group select:focus {
+  border-color: var(--first-color);
+}
+
+.btn-route-action {
+  padding: 10px 15px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: white;
+  transition: all 0.3s ease;
+}
+
+.btn-route-action i {
+  font-size: 16px;
+}
+
+.btn-route-cari {
+  background: var(--first-color);
+}
+
+.btn-route-cari:hover {
+  background: var(--first-color-alt);
+}
+
+.btn-route-reset {
+  background: #dc3545;
+}
+
+.btn-route-reset:hover {
+  background: #c82333;
+}
+
+.route-result-box {
+  margin-top: 15px;
+  padding: 10px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  border-left: 3px solid var(--first-color);
+  font-size: 14px;
+}
+
+.route-result-box strong {
+  color: var(--title-color);
+}
+
+#nearestLocationText {
+  color: var(--text-color);
+}
+
+#nearestLocationText strong {
+  color: var(--first-color);
+}
+
+/* Responsive adjustments */
+@media screen and (max-width: 768px) {
+  .route-selection-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .btn-route-action {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  #routeInfoOverlay {
+    max-width: 90% !important;
+    right: 5% !important;
+    left: 5% !important;
+    max-height: 70vh !important;
+  }
+}
+
+@media screen and (max-width: 450px) {
+  .custom-route-container {
+    padding: 10px;
+  }
+  
+  .custom-route-container h3 {
+    font-size: 14px;
+  }
+  
+  .route-select-group label {
+    font-size: 12px;
+  }
+  
+  .route-select-group select {
+    font-size: 12px;
+    padding: 8px 10px;
+  }
+  
+  .btn-route-action {
+    font-size: 12px;
+    padding: 8px 12px;
+    height: 38px;
+  }
+}
+
+#routeInfoOverlay {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+#routeInfoOverlay::-webkit-scrollbar {
+  width: 6px;
+}
+
+#routeInfoOverlay::-webkit-scrollbar-track {
+  background: #f5f5f5;
+}
+
+#routeInfoOverlay::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 3px;
+}
+
+#routeInfoOverlay::-webkit-scrollbar-thumb:hover {
+  background: #999;
+}
+
+#toggleRouteInfo:hover {
+  background: #3367D6;
+}
+
+#closeRouteInfo:hover {
+  background: #d0d0d0;
+}
