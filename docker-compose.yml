@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vfoodia-web
+    ports:
+      - "8080:80"
+    volumes:
+      - .:/var/www/html
+    environment:
+      - APP_ENV=development
+      - BASE_URL_DEV=http://localhost:8080
+      - DB_HOST_DEV=db
+      - DB_USER_DEV=vfoodia
+      - DB_PASS_DEV=vfoodia
+      - DB_NAME_DEV=vfoodia
+      - DB_PORT_DEV=3306
+    depends_on:
+      - db
+    command: bash -c "composer install --no-interaction --optimize-autoloader --no-dev && apache2-foreground"
+
+  db:
+    image: mariadb:10.5
+    container_name: vfoodia-db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: vfoodia
+      MYSQL_USER: vfoodia
+      MYSQL_PASSWORD: vfoodia
+    volumes:
+      - db_data:/var/lib/mysql
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: vfoodia-phpmyadmin
+    restart: always
+    ports:
+      - "8081:80"
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+    depends_on:
+      - db
+
+volumes:
+  db_data:
