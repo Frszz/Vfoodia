@@ -21,7 +21,7 @@ $endLat = round(floatval($endLat), 5);
 $endLng = round(floatval($endLng), 5);
 
 $stmt = $con->prepare("
-    SELECT route_geometry, distance, duration, created_at 
+    SELECT route_geometry, distance, duration, instructions, created_at 
     FROM tbl_route_cache 
     WHERE start_lat = ? AND start_lng = ? AND end_lat = ? AND end_lng = ?
     AND created_at > DATE_SUB(NOW(), INTERVAL 7 DAY)
@@ -32,7 +32,7 @@ $stmt->execute();
 $result = $stmt->get_result();
 
 if ($cached = $result->fetch_assoc()) {
-    echo json_encode([
+    $response = [
         'routes' => [[
             'geometry' => $cached['route_geometry'],
             'summary' => [
@@ -43,7 +43,14 @@ if ($cached = $result->fetch_assoc()) {
         'source' => 'cache',
         'cached' => true,
         'cached_at' => $cached['created_at']
-    ]);
+    ];
+    
+    // add instructions if available
+    if (!empty($cached['instructions'])) {
+        $response['routes'][0]['segments'] = json_decode($cached['instructions'], true);
+    }
+    
+    echo json_encode($response);
     exit;
 }
 
@@ -55,13 +62,18 @@ if (empty($apiKey)) {
     exit;
 }
 
+$profile = 'cycling-regular';
 
-$url = "https://api.openrouteservice.org/v2/directions/driving-car?api_key={$apiKey}";
+// driving car
+$url = "https://api.openrouteservice.org/v2/directions/{$profile}?api_key={$apiKey}";
 $requestData = [
     'coordinates' => [
         [(float)$startLng, (float)$startLat],
         [(float)$endLng, (float)$endLat]
-    ]
+    ],
+    'instructions' => true,
+    'geometry' => true,
+    'language' => 'id'
 ];
 
 $ch = curl_init($url);
@@ -91,25 +103,32 @@ if ($httpCode == 200 && $response) {
         $distance = $route['summary']['distance'];
         $duration = $route['summary']['duration'];
         
+        // extract segments/instructions for turn-by-turn navigation
+        $instructions = null;
+        if (isset($route['segments']) && is_array($route['segments'])) {
+            $instructions = json_encode($route['segments']);
+        }
+        
         $insertStmt = $con->prepare("
             INSERT INTO tbl_route_cache 
-            (start_lat, start_lng, end_lat, end_lng, route_geometry, distance, duration, created_at) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
+            (start_lat, start_lng, end_lat, end_lng, route_geometry, distance, duration, instructions, created_at) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
             ON DUPLICATE KEY UPDATE 
                 route_geometry = VALUES(route_geometry),
                 distance = VALUES(distance),
                 duration = VALUES(duration),
+                instructions = VALUES(instructions),
                 updated_at = NOW()
         ");
         
-        $insertStmt->bind_param("ddddsid", 
+        $insertStmt->bind_param("ddddsids", 
             $startLat, $startLng, $endLat, $endLng, 
-            $geometry, $distance, $duration
+            $geometry, $distance, $duration, $instructions
         );
         
         $insertStmt->execute();
         
-        echo json_encode([
+        $responseData = [
             'routes' => [[
                 'geometry' => $geometry,
                 'summary' => [
@@ -118,7 +137,13 @@ if ($httpCode == 200 && $response) {
                 ]
             ]],
             'cached' => false
-        ]);
+        ];
+        
+        if (isset($route['segments'])) {
+            $responseData['routes'][0]['segments'] = $route['segments'];
+        }
+        
+        echo json_encode($responseData);
     } else {
         http_response_code(500);
         echo json_encode(['error' => 'Invalid API response format']);

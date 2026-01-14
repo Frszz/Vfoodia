@@ -651,7 +651,15 @@ if (isset($_SESSION['user']) && isset($_SESSION['pass']) && isset($_SESSION['rol
                                                     ✕
                                                 </button>
                                             </div>
-                                            <div style="padding: 10px;">
+                                            <div style="padding: 0; border-bottom: 1px solid #ddd;">
+                                                <button id="tabRouteList" class="route-tab active" style="width: 50%; padding: 8px; border: none; background: #4285F4; color: white; cursor: pointer; font-size: 12px;">
+                                                    Daftar Rute
+                                                </button>
+                                                <button id="tabTurnByTurn" class="route-tab" style="width: 50%; padding: 8px; border: none; background: #e0e0e0; color: #333; cursor: pointer; font-size: 12px;">
+                                                    Turn By Turn
+                                                </button>
+                                            </div>
+                                            <div id="routeListContent" style="padding: 10px;">
                                                 <div id="routeTotalDistance"
                                                     style="background: #f0f0f0; padding: 8px; margin-bottom: 10px; text-align: center; font-weight: bold; color: #333; font-size: 13px;">
                                                     Total: <span id="totalDistanceValue">-</span> km
@@ -667,6 +675,17 @@ if (isset($_SESSION['user']) && isset($_SESSION['pass']) && isset($_SESSION['rol
                                                     <tbody id="routeInfoTableBody">
                                                     </tbody>
                                                 </table>
+                                            </div>
+                                            <div id="turnByTurnContent" style="display: none; padding: 10px;">
+                                                <div style="margin-bottom: 10px;">
+                                                    <label style="font-size: 12px; font-weight: bold; display: block; margin-bottom: 5px;">Pilih Segmen Rute:</label>
+                                                    <select id="routeSegmentSelect" style="width: 100%; padding: 6px; font-size: 12px; border: 1px solid #ddd; border-radius: 4px;">
+                                                        <option value="">Pilih rute untuk melihat instruksi</option>
+                                                    </select>
+                                                </div>
+                                                <div id="turnByTurnInstructions" style="max-height: 60vh; overflow-y: auto;">
+                                                    <p style="text-align: center; color: #999; font-size: 12px; padding: 20px;">Pilih rute untuk melihat instruksi navigasi turn-by-turn</p>
+                                                </div>
                                             </div>
                                         </div>
 
@@ -1019,6 +1038,12 @@ if (isset($_SESSION['user']) && isset($_SESSION['pass']) && isset($_SESSION['rol
                                                         const distanceKm = (distanceM / 1000).toFixed(2);
                                                         const durationMin = Math.round(json.routes[0].summary.duration / 60);
 
+                                                        // Store instructions for turn-by-turn navigation
+                                                        const instructions = json.routes[0].segments || null;
+                                                        if (instructions) {
+                                                            t.instructions = instructions;
+                                                        }
+
                                                         polyline.bindPopup(
                                                             `<b>${t.label}</b><br>` +
                                                             `<b>Jarak:</b> ${distanceM.toLocaleString('id-ID')} meter (${distanceKm} km)<br>` +
@@ -1124,6 +1149,7 @@ Overall Stats:
                                             }
 
                                             updateRouteInfoOverlay(optimizedDestinations);
+                                            updateTurnByTurnDropdown(optimizedDestinations);
                                         }
 
                                         function updateRouteInfoOverlay(optimizedDestinations) {
@@ -1171,6 +1197,115 @@ Overall Stats:
                                                 toggleButton.style.display = 'block';
                                             }
                                         }
+
+                                        function updateTurnByTurnDropdown(optimizedDestinations) {
+                                            const select = document.getElementById('routeSegmentSelect');
+                                            if (!select) return;
+
+                                            select.innerHTML = '<option value="">Pilih rute untuk melihat instruksi</option>';
+                                            
+                                            optimizedDestinations.forEach((dest, index) => {
+                                                const customerName = dest.label.split(' - ')[1] || dest.label;
+                                                const option = document.createElement('option');
+                                                option.value = index;
+                                                option.textContent = `${dest.sequence}. ${customerName}`;
+                                                option.dataset.instructions = dest.instructions ? JSON.stringify(dest.instructions) : '';
+                                                select.appendChild(option);
+                                            });
+                                        }
+
+                                        function displayTurnByTurnInstructions(segments) {
+                                            const container = document.getElementById('turnByTurnInstructions');
+                                            if (!container) return;
+
+                                            if (!segments || segments.length === 0) {
+                                                container.innerHTML = '<p style="text-align: center; color: #999; font-size: 12px; padding: 20px;">Instruksi navigasi tidak tersedia untuk rute ini</p>';
+                                                return;
+                                            }
+
+                                            let html = '<div style="font-size: 12px;">';
+                                            let stepNumber = 1;
+
+                                            segments.forEach((segment, segIndex) => {
+                                                if (segment.steps && segment.steps.length > 0) {
+                                                    segment.steps.forEach((step, stepIndex) => {
+                                                        const instruction = step.instruction || 'Lanjutkan';
+                                                        const distance = step.distance ? (step.distance / 1000).toFixed(2) + ' km' : '';
+                                                        const duration = step.duration ? Math.round(step.duration / 60) + ' menit' : '';
+                                                        const type = step.type || 0;
+                                                        
+                                                        // Get direction icon based on maneuver type
+                                                        let icon = '→';
+                                                        if (type >= 1 && type <= 3) icon = '↗'; // slight right
+                                                        else if (type >= 4 && type <= 6) icon = '→'; // straight
+                                                        else if (type >= 7 && type <= 9) icon = '↘'; // slight left
+                                                        else if (type >= 10 && type <= 12) icon = '→'; // right
+                                                        else if (type >= 13 && type <= 15) icon = '←'; // left
+                                                        else if (type >= 16 && type <= 18) icon = '↻'; // u-turn
+                                                        else if (type >= 19 && type <= 21) icon = '↗'; // sharp right
+                                                        else if (type >= 22 && type <= 24) icon = '↘'; // sharp left
+
+                                                        html += `
+                                                            <div style="padding: 10px; margin-bottom: 8px; border-left: 3px solid #4285F4; background: #f9f9f9; border-radius: 4px;">
+                                                                <div style="display: flex; align-items: start; gap: 10px;">
+                                                                    <div style="font-size: 18px; color: #4285F4; min-width: 24px;">${icon}</div>
+                                                                    <div style="flex: 1;">
+                                                                        <div style="font-weight: 500; color: #333; margin-bottom: 4px;">${stepNumber}. ${instruction}</div>
+                                                                        ${distance ? `<div style="font-size: 11px; color: #666;">Jarak: ${distance}${duration ? ' • Waktu: ' + duration : ''}</div>` : ''}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        `;
+                                                        stepNumber++;
+                                                    });
+                                                }
+                                            });
+
+                                            html += '</div>';
+                                            container.innerHTML = html;
+                                        }
+
+                                        // Tab switching
+                                        $(document).on('click', '#tabRouteList', function() {
+                                            $('#tabRouteList').css({ background: '#4285F4', color: 'white' });
+                                            $('#tabTurnByTurn').css({ background: '#e0e0e0', color: '#333' });
+                                            $('#routeListContent').show();
+                                            $('#turnByTurnContent').hide();
+                                        });
+
+                                        $(document).on('click', '#tabTurnByTurn', function() {
+                                            $('#tabTurnByTurn').css({ background: '#4285F4', color: 'white' });
+                                            $('#tabRouteList').css({ background: '#e0e0e0', color: '#333' });
+                                            $('#turnByTurnContent').show();
+                                            $('#routeListContent').hide();
+                                        });
+
+                                        // Route segment selection
+                                        $(document).on('change', '#routeSegmentSelect', function() {
+                                            const selectedIndex = $(this).val();
+                                            if (selectedIndex === '') {
+                                                document.getElementById('turnByTurnInstructions').innerHTML = 
+                                                    '<p style="text-align: center; color: #999; font-size: 12px; padding: 20px;">Pilih rute untuk melihat instruksi navigasi turn-by-turn</p>';
+                                                return;
+                                            }
+
+                                            const option = this.options[this.selectedIndex];
+                                            const instructionsJson = option.dataset.instructions;
+                                            
+                                            if (instructionsJson) {
+                                                try {
+                                                    const segments = JSON.parse(instructionsJson);
+                                                    displayTurnByTurnInstructions(segments);
+                                                } catch (e) {
+                                                    console.error('Error parsing instructions:', e);
+                                                    document.getElementById('turnByTurnInstructions').innerHTML = 
+                                                        '<p style="text-align: center; color: #f44336; font-size: 12px; padding: 20px;">Error memuat instruksi navigasi</p>';
+                                                }
+                                            } else {
+                                                document.getElementById('turnByTurnInstructions').innerHTML = 
+                                                    '<p style="text-align: center; color: #999; font-size: 12px; padding: 20px;">Instruksi navigasi tidak tersedia untuk rute ini</p>';
+                                            }
+                                        });
 
                                         $(document).on('click', '#toggleRouteInfo', function () {
                                             $('#routeInfoOverlay').fadeIn(300);
