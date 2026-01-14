@@ -80,6 +80,7 @@ img {
 
 .section__height {
   min-height: 100vh;
+  padding-bottom: 3rem;
 }
 
 /*=============== LAYOUT ===============*/
@@ -414,7 +415,7 @@ form {
   width: fit-content;
   border-collapse: separate;
   border-spacing: 2px;
-  margin-bottom: 50px;
+  margin-bottom: 80px;
 }
 .detail-dlv tr th {
   background: black;
@@ -583,7 +584,7 @@ table td {
 #map {
   width: 100%;
   height: 500px;
-  margin-bottom: 50px;
+  margin-bottom: 80px;
   z-index: 0 !important;
 }
 

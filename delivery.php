@@ -638,20 +638,20 @@ if (isset($_SESSION['user']) && isset($_SESSION['pass']) && isset($_SESSION['rol
                                     </div>
                                     <div id="map" style="position: relative;">
                                         <div id="routeInfoOverlay"
-                                            style="display: none; position: absolute; top: 10px; right: 10px; z-index: 1000; background: white; border: 1px solid #ddd; max-width: 350px; max-height: 80vh; overflow-y: auto;">
+                                            style="display: none; position: absolute; top: 10px; right: 10px; bottom: 10px; z-index: 1000; background: white; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); max-width: 350px; width: 350px; display: flex; flex-direction: column; overflow: hidden;">
                                             <div
-                                                style="padding: 10px; border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center; background: #f5f5f5;">
+                                                style="padding: 10px; border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center; background: #f5f5f5; flex-shrink: 0;">
                                                 <div>
                                                     <h3 style="margin: 0; font-size: 14px; font-weight: bold; color: #333;">Informasi Rute</h3>
                                                     <p style="margin: 3px 0 0 0; font-size: 11px; color: #666;" id="routeInfoSubtitle">Urutan
                                                         Pengantaran Hari Ini</p>
                                                 </div>
                                                 <button id="closeRouteInfo"
-                                                    style="background: #e0e0e0; border: none; color: #333; width: 24px; height: 24px; cursor: pointer; font-size: 14px;">
+                                                    style="background: #e0e0e0; border: none; color: #333; width: 24px; height: 24px; cursor: pointer; font-size: 14px; border-radius: 4px;">
                                                     ✕
                                                 </button>
                                             </div>
-                                            <div style="padding: 0; border-bottom: 1px solid #ddd;">
+                                            <div style="padding: 0; border-bottom: 1px solid #ddd; flex-shrink: 0;">
                                                 <button id="tabRouteList" class="route-tab active" style="width: 50%; padding: 8px; border: none; background: #4285F4; color: white; cursor: pointer; font-size: 12px;">
                                                     Daftar Rute
                                                 </button>
@@ -659,9 +659,9 @@ if (isset($_SESSION['user']) && isset($_SESSION['pass']) && isset($_SESSION['rol
                                                     Turn By Turn
                                                 </button>
                                             </div>
-                                            <div id="routeListContent" style="padding: 10px;">
+                                            <div id="routeListContent" style="padding: 10px; overflow-y: auto; flex: 1;">
                                                 <div id="routeTotalDistance"
-                                                    style="background: #f0f0f0; padding: 8px; margin-bottom: 10px; text-align: center; font-weight: bold; color: #333; font-size: 13px;">
+                                                    style="background: #f0f0f0; padding: 8px; margin-bottom: 10px; text-align: center; font-weight: bold; color: #333; font-size: 13px; border-radius: 4px;">
                                                     Total: <span id="totalDistanceValue">-</span> km
                                                 </div>
                                                 <table style="width: 100%; border-collapse: collapse; font-size: 12px;" id="routeInfoTable">
@@ -676,14 +676,14 @@ if (isset($_SESSION['user']) && isset($_SESSION['pass']) && isset($_SESSION['rol
                                                     </tbody>
                                                 </table>
                                             </div>
-                                            <div id="turnByTurnContent" style="display: none; padding: 10px;">
+                                            <div id="turnByTurnContent" style="display: none; padding: 10px; overflow-y: auto; flex: 1;">
                                                 <div style="margin-bottom: 10px;">
                                                     <label style="font-size: 12px; font-weight: bold; display: block; margin-bottom: 5px;">Pilih Segmen Rute:</label>
                                                     <select id="routeSegmentSelect" style="width: 100%; padding: 6px; font-size: 12px; border: 1px solid #ddd; border-radius: 4px;">
                                                         <option value="">Pilih rute untuk melihat instruksi</option>
                                                     </select>
                                                 </div>
-                                                <div id="turnByTurnInstructions" style="max-height: 60vh; overflow-y: auto;">
+                                                <div id="turnByTurnInstructions" style="overflow-y: auto;">
                                                     <p style="text-align: center; color: #999; font-size: 12px; padding: 20px;">Pilih rute untuk melihat instruksi navigasi turn-by-turn</p>
                                                 </div>
                                             </div>
