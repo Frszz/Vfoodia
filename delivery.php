@@ -10,17 +10,17 @@ if (isset($_SESSION['user']) && isset($_SESSION['pass']) && isset($_SESSION['rol
     <head>
         <?php
         include "components/beforeLoad.php";
-        ?>
+    ?>
     </head>
 
     <body>
         <?php
-        include "components/navigation.php";
-        ?>
+    include "components/navigation.php";
+    ?>
 
         <?php
-        if (isset($_GET['type']) && $_GET['type'] == 'create' && $_SESSION['role'] == 'ADMIN') {
-            ?>
+    if (isset($_GET['type']) && $_GET['type'] == 'create' && $_SESSION['role'] == 'ADMIN') {
+        ?>
             <main>
                 <section class="container section section__height">
                     <form class="form-data" method="POST" action="<?= base_url() ?>/process/create.php"
@@ -35,11 +35,11 @@ if (isset($_SESSION['user']) && isset($_SESSION['pass']) && isset($_SESSION['rol
                             <select name="sales" class="searchable" required>
                                 <option value="" disabled selected style="display:none;">Penjualan</option>
                                 <?php
-                                $dropdownSales = mysqli_query($con, "SELECT * FROM vw_sales WHERE sisa_qty_box > 0");
-                                while ($listSales = mysqli_fetch_array($dropdownSales)) {
-                                    echo "<option value=\"" . $listSales['code'] . "\">" . $listSales['code'] . " - " . $listSales['customer_code'] . "(" . $listSales['customer_name'] . ")</option>";
-                                }
-                                ?>
+                            $dropdownSales = mysqli_query($con, "SELECT * FROM vw_sales WHERE sisa_qty_box > 0");
+        while ($listSales = mysqli_fetch_array($dropdownSales)) {
+            echo "<option value=\"" . $listSales['code'] . "\">" . $listSales['code'] . " - " . $listSales['customer_code'] . "(" . $listSales['customer_name'] . ")</option>";
+        }
+        ?>
                             </select>
                         </div>
                         <div class="form-input">
@@ -47,11 +47,11 @@ if (isset($_SESSION['user']) && isset($_SESSION['pass']) && isset($_SESSION['rol
                             <select name="kurir" class="searchable" required>
                                 <option value="" disabled selected style="display:none;">Kurir</option>
                                 <?php
-                                $dropdownKurir = mysqli_query($con, "SELECT * FROM tbl_user WHERE role = 'KURIR' AND is_active = 'TRUE'");
-                                while ($listKurir = mysqli_fetch_array($dropdownKurir)) {
-                                    echo "<option value=\"" . $listKurir['code'] . "\">" . $listKurir['code'] . " - " . $listKurir['full_name'] . "</option>";
-                                }
-                                ?>
+        $dropdownKurir = mysqli_query($con, "SELECT * FROM tbl_user WHERE role = 'KURIR' AND is_active = 'TRUE'");
+        while ($listKurir = mysqli_fetch_array($dropdownKurir)) {
+            echo "<option value=\"" . $listKurir['code'] . "\">" . $listKurir['code'] . " - " . $listKurir['full_name'] . "</option>";
+        }
+        ?>
                             </select>
                         </div>
                         <div class="form-input">
@@ -72,10 +72,10 @@ if (isset($_SESSION['user']) && isset($_SESSION['pass']) && isset($_SESSION['rol
             </main>
             <?php
         } else if (isset($_GET['type']) && $_GET['type'] == 'update' && isset($_GET['id']) && $_SESSION['role'] == 'ADMIN') {
-            $id = (int) $_GET['id'];
-            $qDelivery = mysqli_query($con, "SELECT * FROM vw_delivery WHERE id = $id LIMIT 1");
-            $dataDelivery = mysqli_fetch_array($qDelivery);
-            ?>
+        $id = (int) $_GET['id'];
+        $qDelivery = mysqli_query($con, "SELECT * FROM vw_delivery WHERE id = $id LIMIT 1");
+        $dataDelivery = mysqli_fetch_array($qDelivery);
+        ?>
                 <main>
                     <section class="container section section__height">
                         <form class="form-data" method="POST" action="<?= base_url() ?>/process/update.php"
@@ -92,12 +92,12 @@ if (isset($_SESSION['user']) && isset($_SESSION['pass']) && isset($_SESSION['rol
                                 <select name="sales" class="searchable" required>
                                     <option value="" disabled selected style="display:none;">Penjualan</option>
                                     <?php
-                                    $dropdownSales = mysqli_query($con, "SELECT * FROM vw_sales");
-                                    while ($listSales = mysqli_fetch_array($dropdownSales)) {
-                                        $selected = ($listSales['code'] == $dataDelivery['sales_code']) ? 'selected' : '';
-                                        echo "<option value=\"" . $listSales['code'] . "\" $selected>" . $listSales['code'] . " - " . $listSales['customer_code'] . "(" . $listSales['customer_name'] . ")</option>";
-                                    }
-                                    ?>
+                                $dropdownSales = mysqli_query($con, "SELECT * FROM vw_sales");
+        while ($listSales = mysqli_fetch_array($dropdownSales)) {
+            $selected = ($listSales['code'] == $dataDelivery['sales_code']) ? 'selected' : '';
+            echo "<option value=\"" . $listSales['code'] . "\" $selected>" . $listSales['code'] . " - " . $listSales['customer_code'] . "(" . $listSales['customer_name'] . ")</option>";
+        }
+        ?>
                                 </select>
                             </div>
                             <div class="form-input">
@@ -105,12 +105,12 @@ if (isset($_SESSION['user']) && isset($_SESSION['pass']) && isset($_SESSION['rol
                                 <select name="kurir" class="searchable" required>
                                     <option value="" disabled selected style="display:none;">Kurir</option>
                                     <?php
-                                    $dropdownKurir = mysqli_query($con, "SELECT * FROM tbl_user WHERE role = 'KURIR' AND is_active = 'TRUE'");
-                                    while ($listKurir = mysqli_fetch_array($dropdownKurir)) {
-                                        $selected = ($listKurir['code'] == $dataDelivery['kurir_code']) ? 'selected' : '';
-                                        echo "<option value=\"" . $listKurir['code'] . "\" $selected>" . $listKurir['code'] . " - " . $listKurir['full_name'] . "</option>";
-                                    }
-                                    ?>
+        $dropdownKurir = mysqli_query($con, "SELECT * FROM tbl_user WHERE role = 'KURIR' AND is_active = 'TRUE'");
+        while ($listKurir = mysqli_fetch_array($dropdownKurir)) {
+            $selected = ($listKurir['code'] == $dataDelivery['kurir_code']) ? 'selected' : '';
+            echo "<option value=\"" . $listKurir['code'] . "\" $selected>" . $listKurir['code'] . " - " . $listKurir['full_name'] . "</option>";
+        }
+        ?>
                                 </select>
                             </div>
                             <div class="form-input">
@@ -136,10 +136,10 @@ if (isset($_SESSION['user']) && isset($_SESSION['pass']) && isset($_SESSION['rol
                 </main>
             <?php
         } else if (isset($_GET['type']) && $_GET['type'] == 'delete' && isset($_GET['id']) && $_SESSION['role'] == 'ADMIN') {
-            $id = (int) $_GET['id'];
-            $qDelivery = mysqli_query($con, "SELECT * FROM vw_delivery WHERE id = $id LIMIT 1");
-            $dataDelivery = mysqli_fetch_array($qDelivery);
-            ?>
+        $id = (int) $_GET['id'];
+        $qDelivery = mysqli_query($con, "SELECT * FROM vw_delivery WHERE id = $id LIMIT 1");
+        $dataDelivery = mysqli_fetch_array($qDelivery);
+        ?>
                     <main>
                         <section class="container section section__height">
                             <form class="form-data" method="POST" action="<?= base_url() ?>/process/delete.php"
@@ -185,10 +185,10 @@ if (isset($_SESSION['user']) && isset($_SESSION['pass']) && isset($_SESSION['rol
                     </main>
             <?php
         } else if (isset($_GET['type']) && $_GET['type'] == 'read' && isset($_GET['id']) && $_SESSION['role'] == 'ADMIN') {
-            $id = (int) $_GET['id'];
-            $qDelivery = mysqli_query($con, "SELECT * FROM vw_delivery WHERE id = $id LIMIT 1");
-            $dataDelivery = mysqli_fetch_array($qDelivery);
-            ?>
+        $id = (int) $_GET['id'];
+        $qDelivery = mysqli_query($con, "SELECT * FROM vw_delivery WHERE id = $id LIMIT 1");
+        $dataDelivery = mysqli_fetch_array($qDelivery);
+        ?>
                         <main>
                             <section class="container section section__height">
                                 <form class="form-data" method="POST" enctype="multipart/form-data">
@@ -228,51 +228,51 @@ if (isset($_SESSION['user']) && isset($_SESSION['pass']) && isset($_SESSION['rol
                             </section>
                         </main>
             <?php
-        } else {
-            ?>
+    } else {
+        ?>
                         <main>
                             <section class="container section section__height">
                                 <h2 class="section__title">Pengantaran</h2>
                         <?php
-                        $listLocation = [];
-                        $optionStatus = [];
-                        $result = mysqli_query($con, "SHOW COLUMNS FROM `tbl_delivery` WHERE `field` = 'status'");
-                        if ($result) {
-                            while ($list = mysqli_fetch_row($result)) {
-                                foreach (explode("','", substr($list[1], 6, -2)) as $option) {
-                                    $optionStatus[] = $option;
-                                }
-                            }
-                        }
-                        ?>
+                    $listLocation = [];
+        $optionStatus = [];
+        $result = mysqli_query($con, "SHOW COLUMNS FROM `tbl_delivery` WHERE `field` = 'status'");
+        if ($result) {
+            while ($list = mysqli_fetch_row($result)) {
+                foreach (explode("','", substr($list[1], 6, -2)) as $option) {
+                    $optionStatus[] = $option;
+                }
+            }
+        }
+        ?>
                                 <script>
                                     const statusOptions = <?= json_encode($optionStatus) ?>;
                                 </script>
                         <?php
-                        if ($_SESSION['role'] == 'KURIR') {
-                            $listLocation = [];
-                            $seenKeys = [];
-                            $today = date('Y-m-d');
-                            $qLocation = mysqli_query($con, "SELECT * FROM vw_delivery WHERE (status = 'OTW' OR status = 'WAIT') AND kurir_code = '{$_SESSION['user']}' AND schedule_date = '$today'");
-                            while ($dataLocation = mysqli_fetch_array($qLocation)) {
-                                $lat = (float) $dataLocation['latitude'];
-                                $lng = (float) $dataLocation['longitude'];
-                                $customerCode = $dataLocation['customer_code'];
-                                $kurirCode = $dataLocation['kurir_code'];
+        if ($_SESSION['role'] == 'KURIR') {
+            $listLocation = [];
+            $seenKeys = [];
+            $today = date('Y-m-d');
+            $qLocation = mysqli_query($con, "SELECT * FROM vw_delivery WHERE (status = 'OTW' OR status = 'WAIT') AND kurir_code = '{$_SESSION['user']}' AND schedule_date = '$today'");
+            while ($dataLocation = mysqli_fetch_array($qLocation)) {
+                $lat = (float) $dataLocation['latitude'];
+                $lng = (float) $dataLocation['longitude'];
+                $customerCode = $dataLocation['customer_code'];
+                $kurirCode = $dataLocation['kurir_code'];
 
-                                $key = "{$lat}|{$lng}|{$customerCode}|{$kurirCode}";
-                                if (!isset($seenKeys[$key])) {
-                                    $seenKeys[$key] = true;
-                                    $listLocation[] = [
-                                        'lat' => $lat,
-                                        'lng' => $lng,
-                                        'label' => $customerCode . ' - ' . $dataLocation['customer_name'],
-                                        'kurir' => $kurirCode . ' - ' . $dataLocation['kurir_name'],
+                $key = "{$lat}|{$lng}|{$customerCode}|{$kurirCode}";
+                if (!isset($seenKeys[$key])) {
+                    $seenKeys[$key] = true;
+                    $listLocation[] = [
+                        'lat' => $lat,
+                        'lng' => $lng,
+                        'label' => $customerCode . ' - ' . $dataLocation['customer_name'],
+                        'kurir' => $kurirCode . ' - ' . $dataLocation['kurir_name'],
                                         'address' => $dataLocation['customer_address']
-                                    ];
-                                }
-                            }
-                            ?>
+                    ];
+                }
+            }
+            ?>
                         <?php if (!empty($listLocation)): ?>
 
                         <?php endif; ?>
@@ -407,29 +407,29 @@ if (isset($_SESSION['user']) && isset($_SESSION['pass']) && isset($_SESSION['rol
                                     </script>
                         <?php
                         } else if ($_SESSION['role'] == 'ADMIN') {
-                            // Reset listLocation for ADMIN view
-                            $listLocation = [];
-                            $seenKeys = [];
-                            $today = date('Y-m-d');
-                            $qLocation = mysqli_query($con, "SELECT * FROM vw_delivery WHERE status = 'OTW' OR status = 'WAIT' AND schedule_date = '$today'");
-                            while ($dataLocation = mysqli_fetch_array($qLocation)) {
-                                $lat = (float) $dataLocation['latitude'];
-                                $lng = (float) $dataLocation['longitude'];
-                                $customerCode = $dataLocation['customer_code'];
-                                $kurirCode = $dataLocation['kurir_code'];
+            // Reset listLocation for ADMIN view
+            $listLocation = [];
+            $seenKeys = [];
+            $today = date('Y-m-d');
+            $qLocation = mysqli_query($con, "SELECT * FROM vw_delivery WHERE status = 'OTW' OR status = 'WAIT' AND schedule_date = '$today'");
+            while ($dataLocation = mysqli_fetch_array($qLocation)) {
+                $lat = (float) $dataLocation['latitude'];
+                $lng = (float) $dataLocation['longitude'];
+                $customerCode = $dataLocation['customer_code'];
+                $kurirCode = $dataLocation['kurir_code'];
 
-                                $key = "{$lat}|{$lng}|{$customerCode}|{$kurirCode}";
-                                if (!isset($seenKeys[$key])) {
-                                    $seenKeys[$key] = true;
-                                    $listLocation[] = [
-                                        'lat' => $lat,
-                                        'lng' => $lng,
-                                        'label' => $customerCode . ' - ' . $dataLocation['customer_name'],
-                                        'kurir' => $kurirCode . ' - ' . $dataLocation['kurir_name']
-                                    ];
-                                }
-                            }
-                            ?>
+                $key = "{$lat}|{$lng}|{$customerCode}|{$kurirCode}";
+                if (!isset($seenKeys[$key])) {
+                    $seenKeys[$key] = true;
+                    $listLocation[] = [
+                        'lat' => $lat,
+                        'lng' => $lng,
+                        'label' => $customerCode . ' - ' . $dataLocation['customer_name'],
+                        'kurir' => $kurirCode . ' - ' . $dataLocation['kurir_name']
+                    ];
+                }
+            }
+            ?>
                                         <a class="add-button" href="<?= base_url() ?>/delivery.php?type=create"><i class='bx bx-plus-circle'></i>
                                             Tambah</a>
                                         <table id="record" class="display nowrap" style="width:100%">
@@ -554,18 +554,18 @@ if (isset($_SESSION['user']) && isset($_SESSION['pass']) && isset($_SESSION['rol
                                             });
                                         </script>
                         <?php
-                        }
-                        ?>
+        }
+        ?>
                                 <script>
                                     const listLocation = <?= json_encode($listLocation) ?>;
                                 </script>
                         <?php
-                        if (!empty($listLocation)) {
-                            ?>
+        if (!empty($listLocation)) {
+            ?>
                                     <br>
                             <?php
-                            if ($_SESSION['role'] == 'KURIR') {
-                                ?>
+            if ($_SESSION['role'] == 'KURIR') {
+                ?>
                                         <table class="detail-dlv">
                                             <tr>
                                                 <th colspan="2">Keterangan</th>
@@ -596,8 +596,8 @@ if (isset($_SESSION['user']) && isset($_SESSION['pass']) && isset($_SESSION['rol
                                             </tr>
                                         </table>
                             <?php
-                            }
-                            ?>
+            }
+            ?>
                                     <div class="custom-route-container">
                                         <h3><i class='bx bx-map'></i> Rute Langsung (Point to Point)</h3>
                                         <div class="route-selection-grid">
@@ -706,8 +706,8 @@ if (isset($_SESSION['user']) && isset($_SESSION['pass']) && isset($_SESSION['rol
                                             </td>
                                         </tr>
                                 <?php
-                                foreach ($listLocation as $index => $itemLocation) {
-                                    ?>
+                foreach ($listLocation as $index => $itemLocation) {
+                    ?>
                                             <tr class="delivery-row" data-lat="<?= $itemLocation['lat'] ?>" data-lng="<?= $itemLocation['lng'] ?>">
                                                 <td class="sequence-col" style="width: 40px; text-align: center; font-weight: bold;">-</td>
                                                 <td class="key"><?= $itemLocation['label'] ?></td>
@@ -717,12 +717,12 @@ if (isset($_SESSION['user']) && isset($_SESSION['pass']) && isset($_SESSION['rol
                                                 <td class="key"><?= $itemLocation['kurir'] ?></td>
                                             </tr>
                                 <?php
-                                }
-                                ?>
+                }
+            ?>
                                     </table>
                         <?php
-                        }
-                        ?>
+        }
+        ?>
                             </section>
                         </main>
 
@@ -1234,17 +1234,28 @@ Overall Stats:
                                                         const duration = step.duration ? Math.round(step.duration / 60) + ' menit' : '';
                                                         const type = step.type || 0;
                                                         
-                                                        // Get direction icon based on maneuver type
-                                                        let icon = '→';
-                                                        if (type >= 1 && type <= 3) icon = '↗'; // slight right
-                                                        else if (type >= 4 && type <= 6) icon = '→'; // straight
-                                                        else if (type >= 7 && type <= 9) icon = '↘'; // slight left
-                                                        else if (type >= 10 && type <= 12) icon = '→'; // right
-                                                        else if (type >= 13 && type <= 15) icon = '←'; // left
-                                                        else if (type >= 16 && type <= 18) icon = '↻'; // u-turn
-                                                        else if (type >= 19 && type <= 21) icon = '↗'; // sharp right
-                                                        else if (type >= 22 && type <= 24) icon = '↘'; // sharp left
+                                                        console.log(step)
 
+                                                        // Get direction icon based on maneuver type
+                                                        let icon = '→'; // default: straight
+
+                                                        switch (type) {
+                                                            case 0:  icon = '←'; break;          // Left (Belok Kiri)
+                                                            case 1:  icon = '→'; break;          // Right (Belok Kanan)
+                                                            case 2:  icon = '⟲'; break;          // Sharp Left (Belok Tajam Kiri)
+                                                            case 3:  icon = '⟳'; break;          // Sharp Right (Belok Tajam Kanan)
+                                                            case 4:  icon = '↖'; break;          // Slight Left (Agak Kiri)
+                                                            case 5:  icon = '↗'; break;          // Slight Right (Agak Kanan)
+                                                            case 6:  icon = '↑'; break;          // Straight (Lurus)
+                                                            case 7:  icon = '↻'; break;          // Enter Roundabout (Masuk Bundaran)
+                                                            case 8:  icon = '↺'; break;          // Exit Roundabout (Keluar Bundaran)
+                                                            case 9:  icon = '⤴'; break;          // U-Turn (Putar Balik)
+                                                            case 10: icon = '→'; break;         // Goal/Arrive (Tiba di Tujuan)
+                                                            case 11: icon = '→'; break;         // Depart (Mulai Perjalanan)
+                                                            case 12: icon = '↰'; break;          // Keep Left (Tetap di Kiri)
+                                                            case 13: icon = '↱'; break;          // Keep Right (Tetap di Kanan)
+                                                            default: icon = '→';
+                                                        }
                                                         html += `
                                                             <div style="padding: 10px; margin-bottom: 8px; border-left: 3px solid #4285F4; background: #f9f9f9; border-radius: 4px;">
                                                                 <div style="display: flex; align-items: start; gap: 10px;">
@@ -1295,6 +1306,7 @@ Overall Stats:
                                             if (instructionsJson) {
                                                 try {
                                                     const segments = JSON.parse(instructionsJson);
+                                                    console.log(segments)
                                                     displayTurnByTurnInstructions(segments);
                                                 } catch (e) {
                                                     console.error('Error parsing instructions:', e);
@@ -1407,7 +1419,7 @@ Overall Stats:
                     <?php
                     }
                 }
-                ?>
+        ?>
 
                         <script>
                             let originalDestinations = typeof listLocation !== 'undefined' ? [...listLocation] : [];
@@ -1564,12 +1576,12 @@ Overall Stats:
                             });
                         </script>
             <?php
-        }
-        ?>
+    }
+    ?>
 
         <?php
-        include "components/afterLoad.php";
-        ?>
+    include "components/afterLoad.php";
+    ?>
     </body>
 
     </html>
