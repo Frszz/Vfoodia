@@ -62,7 +62,7 @@ if (empty($apiKey)) {
     exit;
 }
 
-$profile = 'cycling-regular';
+$profile = 'driving-car';
 
 // driving car
 $url = "https://api.openrouteservice.org/v2/directions/{$profile}?api_key={$apiKey}";
