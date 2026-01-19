@@ -137,6 +137,80 @@
                         <a class="sub-off" href="<?=base_url()?>/logout.php"><i class='bx bx-power-off'></i> Log Out</a>
                     </div>
                 </form>
+                                
+                <?php
+                    $allowedRoles = ['ADMIN'];
+                    if (in_array($_SESSION['role'], $allowedRoles)) {
+                ?>
+                <div class="form-input" style="margin-top: 20px;">
+                    <button type="button" class="btn-clear-cache" onclick="clearRouteCache()" style="background: #ff0000; color: white; padding: 12px 20px; border: none; border-radius: 5px; cursor: pointer; width: 100%; font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                        <i class='bx bx-trash'></i> Clear Route Cache
+                    </button>
+                </div>
+                <?php
+                    }
+                ?>
+            </section>
+        </main>
+
+                <script>
+                function clearRouteCache() {
+                    Swal.fire({
+                        title: 'Hapus Semua Cache Rute?',
+                        text: "Semua data cache rute akan dihapus dan sistem akan fetch ulang dari API!",
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#e74c3c',
+                        cancelButtonColor: '#95a5a6',
+                        confirmButtonText: 'Ya, Hapus!',
+                        cancelButtonText: 'Batal'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            Swal.fire({
+                                title: 'Menghapus Cache...',
+                                text: 'Mohon tunggu sebentar',
+                                allowOutsideClick: false,
+                                didOpen: () => {
+                                    Swal.showLoading();
+                                }
+                            });
+                            
+                            fetch('<?=base_url()?>/utils/clear_cache.php', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                }
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success) {
+                                    Swal.fire({
+                                        icon: 'success',
+                                        title: 'Berhasil!',
+                                        text: data.message,
+                                        confirmButtonColor: '#27ae60'
+                                    });
+                                } else {
+                                    Swal.fire({
+                                        icon: 'error',
+                                        title: 'Gagal!',
+                                        text: data.message,
+                                        confirmButtonColor: '#e74c3c'
+                                    });
+                                }
+                            })
+                            .catch(error => {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Error!',
+                                    text: 'Terjadi kesalahan: ' + error.message,
+                                    confirmButtonColor: '#e74c3c'
+                                });
+                            });
+                        }
+                    });
+                }
+                </script>
             </section>
         </main>
 

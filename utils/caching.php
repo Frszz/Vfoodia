@@ -24,7 +24,7 @@ $stmt = $con->prepare("
     SELECT route_geometry, distance, duration, instructions, created_at 
     FROM tbl_route_cache 
     WHERE start_lat = ? AND start_lng = ? AND end_lat = ? AND end_lng = ?
-    AND created_at > DATE_SUB(NOW(), INTERVAL 7 DAY)
+    AND created_at > DATE_SUB(NOW(), INTERVAL 3 DAY)
     LIMIT 1
 ");
 $stmt->bind_param("dddd", $startLat, $startLng, $endLat, $endLng);
